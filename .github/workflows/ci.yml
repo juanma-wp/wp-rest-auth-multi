@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [18, 20]
         php-version: [7.4, 8.0, 8.1, 8.2]
 
     steps:
@@ -29,22 +29,34 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php-version }}
-        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, mbstring, pdo
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, json
+        tools: composer
+        coverage: xdebug
 
     - name: Install Node.js dependencies
       run: npm ci
 
     - name: Install Composer dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: composer install --prefer-dist --no-progress
 
     - name: Start WordPress environment
       run: npm run env:start
+
+    - name: Wait for WordPress to be ready
+      run: |
+        echo "Waiting for WordPress to be ready..."
+        timeout 300 bash -c 'until curl -s http://localhost:8888 > /dev/null; do echo "Waiting..."; sleep 5; done'
+        echo "WordPress is ready!"
 
     - name: Run PHP unit tests
       run: npm run test:unit
 
     - name: Run PHP integration tests
       run: npm run test:integration
+
+    - name: Show wp-env logs on failure
+      if: failure()
+      run: npm run env:logs
 
     - name: Stop WordPress environment
       if: always()

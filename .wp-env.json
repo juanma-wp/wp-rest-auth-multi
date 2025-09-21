@@ -18,6 +18,21 @@
   "port": 8888,
   "testsPort": 8889,
   "lifecycleScripts": {
-    "afterStart": "wp-env run cli wp plugin activate wp-rest-auth-multi"
+    "afterStart": [
+      "wp-env run cli wp plugin activate wp-rest-auth-multi",
+      "wp-env run tests-cli composer install"
+    ]
+  },
+  "env": {
+    "tests": {
+      "config": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true,
+        "WP_DEBUG_DISPLAY": false,
+        "WP_JWT_AUTH_SECRET": "development-secret-key-for-testing-only-never-use-in-production-this-should-be-much-longer",
+        "WP_JWT_ACCESS_TTL": 900,
+        "WP_JWT_REFRESH_TTL": 86400
+      }
+    }
   }
 }

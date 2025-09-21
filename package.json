@@ -12,9 +12,9 @@
     "env:logs": "wp-env logs",
     "env:reset": "wp-env destroy && wp-env start",
     "env:update": "wp-env start --update",
-    "test": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testdox",
-    "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testsuite=unit --testdox",
-    "test:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testsuite=integration --testdox",
+    "test": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi vendor/bin/phpunit --testdox",
+    "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi vendor/bin/phpunit --testsuite=unit --testdox",
+    "test:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi vendor/bin/phpunit --testsuite=integration --testdox",
     "composer:install": "wp-env run tests-cli composer install",
     "composer:update": "wp-env run tests-cli composer update"
   },
