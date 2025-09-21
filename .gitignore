@@ -1,97 +1,53 @@
-# WordPress
-wp-config.php
-wp-content/uploads/
-wp-content/cache/
-wp-content/upgrade/
-wp-content/backup-db/
-wp-content/advanced-cache.php
-wp-content/wp-cache-config.php
-wp-content/blogs.dir/
-wp-content/debug.log
+# Dependencies
+/node_modules/
+/vendor/
 
-# wp-env
-.wp-env/
+# WordPress Environment
+/.wp-env/
 
-# Composer
-vendor/
-composer.lock
+# Tests
+/tests/coverage/
+/phpunit.phar
+/.phpunit.result.cache
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Package managers
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Testing
-.phpunit.result.cache
-tests/coverage/
-coverage/
-phpunit.xml.dist
-*.xml
-!phpunit.xml
-
-# IDE and editors
-.vscode/
-.idea/
+# IDE
+/.vscode/
+/.idea/
 *.swp
 *.swo
-*~
-.DS_Store
-Thumbs.db
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
 # Logs
 *.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+/logs/
 
-# Environment files
+# Temporary files
+/tmp/
+/temp/
+
+# Environment variables
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Build files
-dist/
-build/
-*.min.js
-*.min.css
+# macOS
+.DS_Store
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Plugin specific
+/wp-content/
+/wp-config.php
+
+# Build artifacts
+/dist/
+/build/
+
+# Backup files
 *.bak
 *.backup
 *~
-
-# Cache
-.cache/
-*.cache
-
-# ZIP and archive files
-*.zip
-*.tar.gz
-*.rar
-
-# Plugin specific files
-wp-rest-auth-multi.zip
-
-

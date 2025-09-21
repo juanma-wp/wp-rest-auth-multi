@@ -13,6 +13,8 @@ A comprehensive WordPress plugin that provides both JWT with refresh tokens (Htt
 
 ## Installation
 
+### For Production Use
+
 1. Download or clone this plugin to your `wp-content/plugins/` directory
 2. Add the following constants to your `wp-config.php` file:
 
@@ -23,6 +25,52 @@ define('WP_JWT_REFRESH_TTL', 1209600); // 14 days (optional)
 ```
 
 3. Activate the plugin through the WordPress admin interface
+
+### For Development
+
+1. Clone this repository:
+```bash
+git clone https://github.com/YOUR_USERNAME/wp-rest-auth-multi.git
+cd wp-rest-auth-multi
+```
+
+2. Install dependencies:
+```bash
+# Install PHP dependencies
+composer install
+
+# Install Node.js dependencies for wp-env
+npm install
+```
+
+3. Set up the development environment:
+```bash
+# Start WordPress environment using wp-env
+npm run env:start
+
+# The plugin will be automatically installed and activated
+```
+
+4. Run tests:
+```bash
+# Run all tests
+npm run test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests
+npm run test:integration
+```
+
+5. Access your development site:
+- WordPress site: http://localhost:8888
+- WordPress admin: http://localhost:8888/wp-admin (admin/password)
+
+6. Stop the development environment:
+```bash
+npm run env:stop
+```
 
 ## JWT Authentication
 
