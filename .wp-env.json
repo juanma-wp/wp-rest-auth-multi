@@ -20,7 +20,7 @@
   "lifecycleScripts": {
     "afterStart": [
       "wp-env run cli wp plugin activate wp-rest-auth-multi",
-      "wp-env run tests-cli composer install"
+      "wp-env run tests-cli composer install --prefer-dist --no-progress"
     ]
   },
   "env": {

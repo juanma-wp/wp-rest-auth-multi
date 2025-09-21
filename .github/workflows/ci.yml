@@ -37,7 +37,12 @@ jobs:
       run: npm ci
 
     - name: Install Composer dependencies
-      run: composer install --prefer-dist --no-progress
+      run: |
+        # Try to install with existing lock file first
+        if ! composer install --prefer-dist --no-progress; then
+          echo "Lock file incompatible, updating dependencies..."
+          composer update --prefer-dist --no-progress
+        fi
 
     - name: Start WordPress environment
       run: npm run env:start
