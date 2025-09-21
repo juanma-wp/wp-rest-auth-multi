@@ -1,0 +1,42 @@
+{
+  "name": "wp-rest-auth-multi",
+  "version": "1.0.0",
+  "description": "WordPress plugin providing JWT and OAuth2 authentication for REST API",
+  "scripts": {
+    "env": "wp-env",
+    "env:start": "wp-env start",
+    "env:start:debug": "wp-env start --xdebug",
+    "env:stop": "wp-env stop",
+    "env:destroy": "wp-env destroy",
+    "env:clean": "wp-env clean all",
+    "env:logs": "wp-env logs",
+    "env:reset": "wp-env destroy && wp-env start",
+    "env:update": "wp-env start --update",
+    "test": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testdox",
+    "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testsuite=unit --testdox",
+    "test:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi ./vendor/bin/phpunit -- --testsuite=integration --testdox",
+    "composer:install": "wp-env run tests-cli composer install",
+    "composer:update": "wp-env run tests-cli composer update"
+  },
+  "devDependencies": {
+    "@wordpress/env": "^8.7.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wp-rest-auth-multi/plugin"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "jwt",
+    "oauth2",
+    "authentication",
+    "rest-api"
+  ],
+  "author": "WordPress Developer",
+  "license": "GPL-2.0-or-later"
+}

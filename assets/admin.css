@@ -1,0 +1,287 @@
+/* WP REST Auth Multi Admin Styles */
+
+.oauth2-settings {
+    max-width: 900px;
+}
+
+.oauth2-add-client {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.oauth2-add-client h3 {
+    margin-top: 0;
+    color: #1d2327;
+}
+
+.oauth2-existing-clients {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.oauth2-existing-clients h3 {
+    margin-top: 0;
+    color: #1d2327;
+}
+
+/* Client table styling */
+.oauth2-existing-clients table {
+    margin-top: 15px;
+}
+
+.oauth2-existing-clients code {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.oauth2-existing-clients code:hover {
+    background-color: #f0f0f1;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Button styling */
+#generate_client_id,
+#generate_jwt_secret,
+#toggle_jwt_secret {
+    margin-left: 10px;
+}
+
+#add_oauth2_client {
+    margin-top: 10px;
+}
+
+.delete-client {
+    color: #d63638;
+    border-color: #d63638;
+}
+
+.delete-client:hover {
+    color: #fff;
+    background-color: #d63638;
+    border-color: #d63638;
+}
+
+/* Help tab styling */
+.help-tab {
+    max-width: 900px;
+}
+
+.help-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.help-section h3 {
+    margin-top: 0;
+    color: #1d2327;
+}
+
+.help-section h4 {
+    color: #1d2327;
+    margin-bottom: 10px;
+}
+
+.help-section code {
+    background-color: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
+}
+
+.help-section ul,
+.help-section ol {
+    margin-left: 20px;
+}
+
+.help-section li {
+    margin-bottom: 5px;
+}
+
+/* Form validation styling */
+.form-table input.error,
+.form-table textarea.error {
+    border-color: #d63638;
+    box-shadow: 0 0 2px rgba(214, 54, 56, 0.5);
+}
+
+/* Notice styling */
+.wp-rest-auth-multi-notice {
+    position: relative;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Tab content spacing */
+.nav-tab-wrapper + form {
+    margin-top: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .oauth2-settings,
+    .help-tab {
+        max-width: 100%;
+    }
+
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .form-table th {
+        border-bottom: none;
+    }
+
+    .form-table td {
+        border-top: none;
+        padding-left: 0;
+    }
+
+    #generate_client_id,
+    #generate_jwt_secret,
+    #toggle_jwt_secret {
+        margin-left: 0;
+        margin-top: 5px;
+        display: block;
+    }
+
+    .oauth2-existing-clients table {
+        font-size: 14px;
+    }
+
+    .oauth2-existing-clients code {
+        word-break: break-all;
+        display: inline-block;
+        max-width: 100%;
+    }
+}
+
+/* Loading states */
+.button.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.button.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border: 2px solid transparent;
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success/Error states */
+.input-success {
+    border-color: #00a32a !important;
+    box-shadow: 0 0 2px rgba(0, 163, 42, 0.5) !important;
+}
+
+.input-error {
+    border-color: #d63638 !important;
+    box-shadow: 0 0 2px rgba(214, 54, 56, 0.5) !important;
+}
+
+/* Tooltip styling */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+/* Enhanced form styling */
+.form-table input[type="text"],
+.form-table input[type="password"],
+.form-table input[type="number"],
+.form-table textarea {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-table input[type="text"]:focus,
+.form-table input[type="password"]:focus,
+.form-table input[type="number"]:focus,
+.form-table textarea:focus {
+    border-color: #007cba;
+    box-shadow: 0 0 2px rgba(0, 124, 186, 0.5);
+}
+
+/* Copy feedback */
+.copy-feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10000;
+    animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+}
+
+/* Settings sections */
+.settings-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.settings-section h2 {
+    background: #f6f7f7;
+    margin: 0;
+    padding: 15px 20px;
+    border-bottom: 1px solid #c3c4c7;
+    border-radius: 4px 4px 0 0;
+}
+
+.settings-section .form-table {
+    margin: 0;
+}
+
+/* WordPress admin color scheme compatibility */
+.wp-admin.admin-color-blue .oauth2-add-client,
+.wp-admin.admin-color-coffee .oauth2-add-client,
+.wp-admin.admin-color-ectoplasm .oauth2-add-client,
+.wp-admin.admin-color-midnight .oauth2-add-client,
+.wp-admin.admin-color-ocean .oauth2-add-client,
+.wp-admin.admin-color-sunrise .oauth2-add-client {
+    border-color: currentColor;
+}

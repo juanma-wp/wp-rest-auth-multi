@@ -1,0 +1,149 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2']
+        wordpress-version: ['6.2', '6.3', '6.4', 'latest']
+
+    name: PHP ${{ matrix.php-version }} - WP ${{ matrix.wordpress-version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, redis, igbinary, msgpack, lzf, zstd, lz4, memcached
+          coverage: xdebug
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
+
+      - name: Setup wp-env with specific WordPress version
+        run: |
+          if [ "${{ matrix.wordpress-version }}" != "latest" ]; then
+            sed -i 's/"WordPress\/WordPress#.*"/"WordPress\/WordPress#${{ matrix.wordpress-version }}"/g' .wp-env.json
+          fi
+
+      - name: Start wp-env
+        run: npm run env:start
+
+      - name: Wait for WordPress
+        run: |
+          timeout 120 bash -c 'until curl -s http://localhost:8889 > /dev/null; do sleep 2; done'
+
+      - name: Run PHPUnit tests
+        run: npm run test
+
+      - name: Run Unit tests
+        run: npm run test:unit
+
+      - name: Run Integration tests
+        run: npm run test:integration
+
+      - name: Generate coverage report
+        if: matrix.php-version == '8.1' && matrix.wordpress-version == 'latest'
+        run: npm run test:coverage
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.php-version == '8.1' && matrix.wordpress-version == 'latest'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./tests/coverage/clover.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Archive test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-php-${{ matrix.php-version }}-wp-${{ matrix.wordpress-version }}
+          path: |
+            tests/coverage/
+            .wp-env/
+          retention-days: 7
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Code Quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer, cs2pr
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
+
+      - name: Add Composer bin to PATH
+        run: echo "$(composer config bin-dir --absolute)" >> $GITHUB_PATH
+
+      - name: Run PHPCS
+        if: always()
+        run: |
+          if command -v phpcs &> /dev/null; then
+            phpcs --standard=WordPress --report=checkstyle includes/ wp-rest-auth-multi.php | cs2pr
+          else
+            echo "PHPCS not available, skipping code style check"
+          fi
+
+      - name: Run PHPStan (if available)
+        if: always()
+        run: |
+          if command -v phpstan &> /dev/null; then
+            phpstan analyse includes/ wp-rest-auth-multi.php --level=5
+          else
+            echo "PHPStan not available, skipping static analysis"
+          fi
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
+
+      - name: Run security scan
+        run: |
+          if [ -f "composer.json" ]; then
+            composer audit
+          fi
+
+      - name: Check for known vulnerabilities
+        uses: symfonycorp/security-checker-action@v5

@@ -1,0 +1,39 @@
+{
+    "name": "wp-rest-auth-multi/plugin",
+    "description": "WordPress plugin providing JWT and OAuth2 authentication for REST API",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "yoast/phpunit-polyfills": "^1.0",
+        "wp-phpunit/wp-phpunit": "^6.8",
+        "johnpbloch/wordpress-core": "^6.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "WPRestAuthMulti\\": "includes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "WPRestAuthMulti\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test-unit": "phpunit --testsuite=unit",
+        "test-integration": "phpunit --testsuite=integration",
+        "test-coverage": "phpunit --coverage-html tests/coverage/html",
+        "test-watch": "phpunit --watch",
+        "phpcs": "phpcs --standard=WordPress includes/ wp-rest-auth-multi.php",
+        "phpcs-fix": "phpcbf --standard=WordPress includes/ wp-rest-auth-multi.php"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}
