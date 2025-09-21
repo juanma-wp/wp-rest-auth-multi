@@ -17,12 +17,6 @@
   },
   "port": 8888,
   "testsPort": 8889,
-  "lifecycleScripts": {
-    "afterStart": [
-      "wp-env run cli wp plugin activate wp-rest-auth-multi",
-      "wp-env run tests-cli composer install --prefer-dist --no-progress"
-    ]
-  },
   "env": {
     "tests": {
       "config": {
