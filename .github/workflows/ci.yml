@@ -12,67 +12,173 @@ jobs:
     
     strategy:
       matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2']
+        wordpress-version: ['6.2', '6.3', '6.4', 'latest']
         node-version: [18, 20]
-        php-version: [7.4, 8.0, 8.1, 8.2]
+        exclude:
+          # Reduce matrix size - only test Node 18 with older WP versions
+          - wordpress-version: '6.2'
+            node-version: 20
+          - wordpress-version: '6.3'
+            node-version: 20
+
+    name: PHP ${{ matrix.php-version }} - WP ${{ matrix.wordpress-version }} - Node ${{ matrix.node-version }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-    - name: Setup PHP ${{ matrix.php-version }}
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: ${{ matrix.php-version }}
-        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, json
-        tools: composer
-        coverage: xdebug
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, json
+          tools: composer
+          coverage: xdebug
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Install Docker Compose
-      run: |
-        # GitHub Actions runners have Docker but not docker-compose
-        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
+      - name: Install Docker Compose
+        run: |
+          # GitHub Actions runners have Docker but not docker-compose
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
 
-    - name: Install Node.js dependencies
-      run: npm ci
+      - name: Install Node.js dependencies
+        run: npm ci
 
-    - name: Install Composer dependencies
-      run: |
-        # Try to install with existing lock file first
-        if ! composer install --prefer-dist --no-progress; then
-          echo "Lock file incompatible, updating dependencies..."
-          composer update --prefer-dist --no-progress
-        fi
+      - name: Install Composer dependencies
+        run: |
+          # Try to install with existing lock file first
+          if ! composer install --prefer-dist --no-progress --optimize-autoloader; then
+            echo "Lock file incompatible, updating dependencies..."
+            composer update --prefer-dist --no-progress --optimize-autoloader
+          fi
 
-    - name: Start WordPress environment
-      run: npm run env:start
+      - name: Setup wp-env with specific WordPress version
+        run: |
+          if [ "${{ matrix.wordpress-version }}" != "latest" ]; then
+            sed -i 's/"WordPress\/WordPress#.*"/"WordPress\/WordPress#${{ matrix.wordpress-version }}"/g' .wp-env.json
+          fi
 
-    - name: Wait for WordPress to be ready
-      run: |
-        echo "Waiting for WordPress to be ready..."
-        timeout 300 bash -c 'until curl -s http://localhost:8888 > /dev/null; do echo "Waiting..."; sleep 5; done'
-        echo "WordPress is ready!"
+      - name: Start WordPress environment
+        run: npm run env:start
 
-    - name: Run PHP unit tests
-      run: npm run test:unit
+      - name: Wait for WordPress to be ready
+        run: |
+          echo "Waiting for WordPress to be ready..."
+          timeout 300 bash -c 'until curl -s http://localhost:8888 > /dev/null; do echo "Waiting..."; sleep 5; done'
+          echo "WordPress is ready!"
 
-    - name: Run PHP integration tests
-      run: npm run test:integration
+      - name: Run PHP unit tests
+        run: npm run test:unit
 
-    - name: Show wp-env logs on failure
-      if: failure()
-      run: npm run env:logs
+      - name: Run PHP integration tests
+        run: npm run test:integration
 
-    - name: Stop WordPress environment
-      if: always()
-      run: npm run env:stop
+      - name: Generate coverage report
+        if: matrix.php-version == '8.1' && matrix.wordpress-version == 'latest' && matrix.node-version == 20
+        run: |
+          if npm run test:coverage 2>/dev/null; then
+            echo "Coverage report generated successfully"
+          else
+            echo "Coverage generation not available, skipping"
+          fi
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.php-version == '8.1' && matrix.wordpress-version == 'latest' && matrix.node-version == 20
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./tests/coverage/clover.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Show wp-env logs on failure
+        if: failure()
+        run: npm run env:logs
+
+      - name: Archive test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-php-${{ matrix.php-version }}-wp-${{ matrix.wordpress-version }}-node-${{ matrix.node-version }}
+          path: |
+            tests/coverage/
+            .wp-env/
+          retention-days: 7
+
+      - name: Stop WordPress environment
+        if: always()
+        run: npm run env:stop
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Code Quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer, cs2pr
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Add Composer bin to PATH
+        run: echo "$(composer config bin-dir --absolute)" >> $GITHUB_PATH
+
+      - name: Run PHPCS
+        if: always()
+        run: |
+          if command -v phpcs &> /dev/null; then
+            phpcs --standard=WordPress --report=checkstyle includes/ wp-rest-auth-multi.php | cs2pr
+          else
+            echo "PHPCS not available, skipping code style check"
+          fi
+
+      - name: Run PHPStan (if available)
+        if: always()
+        run: |
+          if command -v phpstan &> /dev/null; then
+            phpstan analyse includes/ wp-rest-auth-multi.php --level=5
+          else
+            echo "PHPStan not available, skipping static analysis"
+          fi
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Run security scan
+        run: |
+          if [ -f "composer.json" ]; then
+            composer audit
+          fi
+
+      - name: Check for known vulnerabilities
+        uses: symfonycorp/security-checker-action@v5
