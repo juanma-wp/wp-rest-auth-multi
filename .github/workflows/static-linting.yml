@@ -1,0 +1,47 @@
+name: 🔍 Static Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Static Code Analysis
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Lint JavaScript files
+        run: npm run lint:js
+
+      - name: Lint CSS files
+        run: npm run lint:css
+
+      - name: Lint Markdown files (JS code blocks)
+        run: npm run lint:md:js
+
+      - name: Check code formatting
+        run: |
+          npm run format:js
+          # Check if any files were changed by formatting
+          if ! git diff --exit-code; then
+            echo "❌ Code formatting issues found. Run 'npm run format' to fix them."
+            echo "Files that need formatting:"
+            git diff --name-only
+            exit 1
+          else
+            echo "✅ All files are properly formatted"
+          fi

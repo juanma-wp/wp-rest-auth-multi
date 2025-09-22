@@ -1,6 +1,6 @@
 # WP REST Multi Auth (JWT + OAuth2)
 
-[![CI](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/ci.yml/badge.svg)](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/ci.yml)
+[![CI](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/ci.yml/badge.svg)](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/ci.yml) [![🔍 Static Linting](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/static-linting.yml/badge.svg)](https://github.com/juanma-wp/wp-rest-auth-multi/actions/workflows/static-linting.yml)
 
 A comprehensive WordPress plugin that provides both JWT with refresh tokens (HttpOnly cookies) and OAuth2 authentication for the WordPress REST API.
 

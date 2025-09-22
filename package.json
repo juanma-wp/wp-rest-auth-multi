@@ -16,10 +16,17 @@
     "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi vendor/bin/phpunit --testsuite=unit --testdox",
     "test:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-rest-auth-multi vendor/bin/phpunit --testsuite=integration --testdox",
     "composer:install": "wp-env run tests-cli composer install",
-    "composer:update": "wp-env run tests-cli composer update"
+    "composer:update": "wp-env run tests-cli composer update",
+    "lint:js": "wp-scripts lint-js assets/ includes/ wp-rest-auth-multi.php",
+    "lint:css": "wp-scripts lint-style assets/",
+    "lint:md:js": "wp-scripts lint-md-js README.md",
+    "lint": "npm run lint:js && npm run lint:css && npm run lint:md:js",
+    "format:js": "wp-scripts format assets/ includes/ wp-rest-auth-multi.php",
+    "format": "npm run format:js"
   },
   "devDependencies": {
-    "@wordpress/env": "^8.7.0"
+    "@wordpress/env": "^8.7.0",
+    "@wordpress/scripts": "^28.8.0"
   },
   "engines": {
     "node": ">=16.0.0",
