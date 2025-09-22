@@ -232,14 +232,44 @@ function wp_auth_multi_delete_cookie(string $name, string $path = '/'): bool {
  * @return bool Whether the origin is allowed
  */
 function wp_auth_multi_is_valid_origin(string $origin): bool {
-    $allowed_origins = apply_filters('wp_auth_multi_cors_origins', [
+    // Get CORS origins from admin settings
+    $general_settings = WP_REST_Auth_Multi_Admin_Settings::get_general_settings();
+    $cors_origins = $general_settings['cors_allowed_origins'] ?? '';
+
+    $default_origins = [
         home_url(),
         'http://localhost:3000',
         'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
         'http://localhost:8080'
-    ]);
+    ];
 
-    return in_array(rtrim($origin, '/'), $allowed_origins, true);
+    // Parse admin-configured origins
+    $admin_origins = [];
+    if (!empty($cors_origins)) {
+        $admin_origins = array_filter(array_map('trim', explode("\n", $cors_origins)));
+    }
+
+    // Combine admin-configured and default origins
+    $allowed_origins = array_merge($default_origins, $admin_origins);
+
+    // Apply filter for programmatic configuration
+    $allowed_origins = apply_filters('wp_auth_multi_cors_origins', $allowed_origins);
+
+    // Check for wildcard
+    if (in_array('*', $allowed_origins)) {
+        return true;
+    }
+
+    // Development mode: auto-allow localhost origins
+    if (wp_get_environment_type() === 'development' && preg_match('/^https?:\/\/localhost(:\d+)?/', $origin)) {
+        return true;
+    }
+
+    return in_array(rtrim($origin, '/'), array_map(function($origin) {
+        return rtrim($origin, '/');
+    }, $allowed_origins), true);
 }
 
 /**
@@ -260,4 +290,69 @@ function wp_auth_multi_maybe_add_cors_headers(): void {
             exit;
         }
     }
+}
+
+/**
+ * Standardized success response format
+ *
+ * @param array $data Response data
+ * @param string|null $message Optional success message
+ * @param int $status HTTP status code
+ * @return WP_REST_Response
+ */
+function wp_auth_multi_success_response(array $data = [], ?string $message = null, int $status = 200): WP_REST_Response {
+    $response = [
+        'success' => true,
+        'data' => $data
+    ];
+
+    if ($message) {
+        $response['message'] = $message;
+    }
+
+    return new WP_REST_Response($response, $status);
+}
+
+/**
+ * Standardized error response format
+ *
+ * @param string $code Error code
+ * @param string $message Error message
+ * @param int $status HTTP status code
+ * @param array $data Additional error data
+ * @return WP_Error
+ */
+function wp_auth_multi_error_response(string $code, string $message, int $status = 400, array $data = []): WP_Error {
+    return new WP_Error($code, $message, array_merge(['status' => $status], $data));
+}
+
+/**
+ * Standardized user data format
+ *
+ * @param WP_User $user WordPress user object
+ * @param bool $include_sensitive Whether to include sensitive data
+ * @return array Standardized user data
+ */
+function wp_auth_multi_format_user_data(WP_User $user, bool $include_sensitive = false): array {
+    $user_data = [
+        'id' => (int) $user->ID,
+        'username' => $user->user_login,
+        'email' => $user->user_email,
+        'display_name' => $user->display_name,
+        'first_name' => $user->first_name,
+        'last_name' => $user->last_name,
+        'nickname' => $user->nickname,
+        'roles' => array_values($user->roles),
+        'capabilities' => array_keys($user->allcaps),
+        'avatar_url' => get_avatar_url($user->ID),
+        'registered_date' => $user->user_registered,
+        'profile_url' => get_author_posts_url($user->ID)
+    ];
+
+    if ($include_sensitive) {
+        $user_data['user_url'] = $user->user_url;
+        $user_data['description'] = $user->description;
+    }
+
+    return apply_filters('wp_auth_multi_user_data', $user_data, $user, $include_sensitive);
 }

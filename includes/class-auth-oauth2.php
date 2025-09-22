@@ -714,52 +714,52 @@ class Auth_OAuth2 {
         $client_secret = $request->get_param('client_secret');
 
         if ($grant_type !== 'authorization_code') {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'unsupported_grant_type',
                 'Only authorization_code grant type is supported',
-                ['status' => 400]
+                400
             );
         }
 
         $client = $this->get_client($client_id);
         if (!$client) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_client',
                 'Invalid client',
-                ['status' => 401]
+                401
             );
         }
 
         if (!wp_check_password($client_secret, $client['client_secret'])) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_client',
                 'Invalid client credentials',
-                ['status' => 401]
+                401
             );
         }
 
         $code_data = get_transient($this->code_key($code));
         if (!$code_data) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_grant',
                 'Invalid or expired authorization code',
-                ['status' => 400]
+                400
             );
         }
 
         if ($code_data['client_id'] !== $client_id) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_grant',
                 'Authorization code was issued to another client',
-                ['status' => 400]
+                400
             );
         }
 
         if ($code_data['redirect_uri'] !== $redirect_uri) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_grant',
                 'Redirect URI does not match',
-                ['status' => 400]
+                400
             );
         }
 
@@ -778,12 +778,12 @@ class Auth_OAuth2 {
             'created' => time()
         ], self::TOKEN_TTL);
 
-        return [
+        return wp_auth_multi_success_response([
             'access_token' => $access_token,
             'token_type' => 'Bearer',
             'expires_in' => self::TOKEN_TTL,
             'scope' => implode(' ', $approved_scopes)
-        ];
+        ], 'Token generated successfully', 200);
     }
 
     public function userinfo_endpoint(WP_REST_Request $request) {
@@ -792,10 +792,10 @@ class Auth_OAuth2 {
         $user = wp_get_current_user();
 
         if (!$user || !$user->ID) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'unauthorized',
                 'Not authenticated',
-                ['status' => 401]
+                401
             );
         }
 
@@ -809,32 +809,27 @@ class Auth_OAuth2 {
         $token_data = get_transient($this->token_key($token));
         $granted_scopes = $token_data['scopes'] ?? ['read'];
 
-        // Build response based on granted scopes
-        $response = [
-            'sub' => (string)$user->ID,
+        // Build response data based on granted scopes
+        $response_data = [
+            'user_id' => (string)$user->ID,
             'granted_scopes' => $granted_scopes
         ];
 
         // Add user info only if 'read' scope is granted
         if (in_array('read', $granted_scopes)) {
-            $response = array_merge($response, [
-                'username' => $user->user_login,
-                'email' => $user->user_email,
-                'name' => $user->display_name,
-                'roles' => array_values($user->roles)
-            ]);
+            $response_data['user'] = wp_auth_multi_format_user_data($user, true);
         }
 
         // Add management info if 'manage_users' scope is granted
         if (in_array('manage_users', $granted_scopes) && user_can($user, 'list_users')) {
-            $response['capabilities'] = [
+            $response_data['capabilities'] = [
                 'can_manage_users' => true,
                 'can_edit_users' => user_can($user, 'edit_users'),
                 'can_create_users' => user_can($user, 'create_users')
             ];
         }
 
-        return $response;
+        return wp_auth_multi_success_response($response_data, 'User info retrieved successfully', 200);
     }
 
     public function authenticate_bearer(string $token) {

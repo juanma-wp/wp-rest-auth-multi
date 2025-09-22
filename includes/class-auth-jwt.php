@@ -67,20 +67,20 @@ class Auth_JWT {
         $password = $request->get_param('password');
 
         if (empty($username) || empty($password)) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'missing_credentials',
                 'Username and password are required',
-                ['status' => 400]
+                400
             );
         }
 
         $user = wp_authenticate($username, $password);
 
         if (is_wp_error($user)) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'invalid_credentials',
                 'Invalid username or password',
-                ['status' => 401]
+                401
             );
         }
 
@@ -115,17 +115,12 @@ class Auth_JWT {
             'Strict'
         );
 
-        return [
+        return wp_auth_multi_success_response([
             'access_token' => $access_token,
             'token_type' => 'Bearer',
             'expires_in' => WP_JWT_ACCESS_TTL,
-            'user' => [
-                'id' => $user->ID,
-                'username' => $user->user_login,
-                'email' => $user->user_email,
-                'roles' => array_values($user->roles)
-            ]
-        ];
+            'user' => wp_auth_multi_format_user_data($user)
+        ], 'Login successful', 200);
     }
 
     public function refresh_access_token(WP_REST_Request $request) {
@@ -134,10 +129,10 @@ class Auth_JWT {
         $refresh_token = $_COOKIE[self::REFRESH_COOKIE_NAME] ?? '';
 
         if (empty($refresh_token)) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'missing_refresh_token',
                 'Refresh token not found',
-                ['status' => 401]
+                401
             );
         }
 
@@ -149,10 +144,10 @@ class Auth_JWT {
 
         $user = get_user_by('id', $token_data['user_id']);
         if (!$user) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'user_not_found',
                 'User not found',
-                ['status' => 401]
+                401
             );
         }
 
@@ -189,11 +184,11 @@ class Auth_JWT {
             );
         }
 
-        return [
+        return wp_auth_multi_success_response([
             'access_token' => $access_token,
             'token_type' => 'Bearer',
             'expires_in' => WP_JWT_ACCESS_TTL
-        ];
+        ], 'Token refreshed successfully', 200);
     }
 
     public function logout(WP_REST_Request $request) {
@@ -208,7 +203,7 @@ class Auth_JWT {
         // Delete refresh token cookie
         wp_auth_multi_delete_cookie(self::REFRESH_COOKIE_NAME, '/wp-json/jwt/v1/');
 
-        return new WP_REST_Response(null, 204);
+        return wp_auth_multi_success_response([], 'Logout successful', 200);
     }
 
     public function whoami(WP_REST_Request $request) {
@@ -217,21 +212,17 @@ class Auth_JWT {
         $user = wp_get_current_user();
 
         if (!$user || !$user->ID) {
-            return new WP_Error(
+            return wp_auth_multi_error_response(
                 'not_authenticated',
                 'You are not authenticated',
-                ['status' => 401]
+                401
             );
         }
 
-        return [
+        return wp_auth_multi_success_response([
             'authenticated' => true,
-            'user' => [
-                'id' => $user->ID,
-                'username' => $user->user_login,
-                'email' => $user->user_email,
-                'roles' => array_values($user->roles)
-            ]
+            'user' => wp_auth_multi_format_user_data($user)
+        ], 'Token is valid', 200);
         ];
     }
 
