@@ -18,7 +18,11 @@
   "port": 8888,
   "testsPort": 8889,
   "env": {
+    "development": {
+      "cliImage": "wordpress:cli-php8.1-alpine3.19"
+    },
     "tests": {
+      "cliImage": "wordpress:cli-php8.1-alpine3.19",
       "config": {
         "WP_DEBUG": true,
         "WP_DEBUG_LOG": true,
