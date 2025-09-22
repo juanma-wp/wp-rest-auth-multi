@@ -223,7 +223,6 @@ class Auth_JWT {
             'authenticated' => true,
             'user' => wp_auth_multi_format_user_data($user)
         ], 'Token is valid', 200);
-        ];
     }
 
     public function authenticate_bearer(string $token) {

@@ -124,8 +124,13 @@ class RestAPIIntegrationTest extends WP_UnitTestCase
                 // Expected if authentication fails in test environment
                 $this->assertInstanceOf('WP_Error', $response);
             } else {
-                $this->assertArrayHasKey('access_token', $response);
-                $this->assertArrayHasKey('expires_in', $response);
+                $this->assertInstanceOf('WP_REST_Response', $response);
+                $data = $response->get_data();
+                $this->assertArrayHasKey('success', $data);
+                $this->assertTrue($data['success']);
+                $this->assertArrayHasKey('data', $data);
+                $this->assertArrayHasKey('access_token', $data['data']);
+                $this->assertArrayHasKey('expires_in', $data['data']);
             }
         } else {
             $this->markTestSkipped('Auth_JWT class not available');
