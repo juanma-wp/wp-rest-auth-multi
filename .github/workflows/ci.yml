@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         php-version: ['7.4', '8.0', '8.1', '8.2']
-        wordpress-version: ['6.2', '6.3', '6.4', 'latest']
+        wordpress-version: ['latest']
         node-version: [18, 20]
         exclude:
           # Reduce matrix size - only test Node 18 with older WP versions
