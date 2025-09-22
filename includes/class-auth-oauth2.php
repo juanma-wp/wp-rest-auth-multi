@@ -12,6 +12,8 @@ class Auth_OAuth2 {
     const CODE_TTL = 300;     // 5 minutes
     const TOKEN_TTL = 3600;   // 1 hour
     const OPTION_CLIENTS = 'oauth2_clients';
+    const OAUTH2_REFRESH_COOKIE_NAME = 'wp_oauth2_refresh_token';
+    const REFRESH_TTL = 2592000; // 30 days
 
     // Store current token scopes for request validation
     private array $current_token_scopes = [];
@@ -91,6 +93,18 @@ class Auth_OAuth2 {
         register_rest_route('oauth2/v1', '/userinfo', [
             'methods' => 'GET',
             'callback' => [$this, 'userinfo_endpoint'],
+            'permission_callback' => '__return_true'
+        ]);
+
+        register_rest_route('oauth2/v1', '/refresh', [
+            'methods' => 'POST',
+            'callback' => [$this, 'refresh_token_endpoint'],
+            'permission_callback' => '__return_true'
+        ]);
+
+        register_rest_route('oauth2/v1', '/logout', [
+            'methods' => 'POST',
+            'callback' => [$this, 'logout_endpoint'],
             'permission_callback' => '__return_true'
         ]);
 
@@ -778,6 +792,24 @@ class Auth_OAuth2 {
             'created' => time()
         ], self::TOKEN_TTL);
 
+        // Generate refresh token
+        $now = time();
+        $refresh_token = wp_auth_multi_generate_token(64);
+        $refresh_expires = $now + self::REFRESH_TTL;
+
+        // Store refresh token in database
+        $this->store_oauth2_refresh_token($code_data['user_id'], $refresh_token, $refresh_expires, $client_id, $approved_scopes);
+
+        // Set refresh token as HttpOnly cookie
+        wp_auth_multi_set_cookie(
+            self::OAUTH2_REFRESH_COOKIE_NAME,
+            $refresh_token,
+            $refresh_expires,
+            '/wp-json/oauth2/v1/',
+            true,
+            true
+        );
+
         return wp_auth_multi_success_response([
             'access_token' => $access_token,
             'token_type' => 'Bearer',
@@ -830,6 +862,89 @@ class Auth_OAuth2 {
         }
 
         return wp_auth_multi_success_response($response_data, 'User info retrieved successfully', 200);
+    }
+
+    public function refresh_token_endpoint(WP_REST_Request $request) {
+        wp_auth_multi_maybe_add_cors_headers();
+
+        $refresh_token = $_COOKIE[self::OAUTH2_REFRESH_COOKIE_NAME] ?? '';
+
+        if (empty($refresh_token)) {
+            return wp_auth_multi_error_response(
+                'missing_refresh_token',
+                'Refresh token not found',
+                401
+            );
+        }
+
+        $token_data = $this->validate_oauth2_refresh_token($refresh_token);
+
+        if (is_wp_error($token_data)) {
+            return $token_data;
+        }
+
+        $user = get_user_by('id', $token_data['user_id']);
+        if (!$user) {
+            return wp_auth_multi_error_response(
+                'invalid_user',
+                'User not found',
+                401
+            );
+        }
+
+        // Generate new access token
+        $access_token = wp_auth_multi_generate_token(48);
+        $approved_scopes = json_decode($token_data['scopes'], true) ?? ['read'];
+
+        // Store access token with approved scopes
+        set_transient($this->token_key($access_token), [
+            'user_id' => $token_data['user_id'],
+            'client_id' => $token_data['client_id'],
+            'scopes' => $approved_scopes,
+            'created' => time()
+        ], self::TOKEN_TTL);
+
+        // Optionally rotate refresh token for better security
+        if (apply_filters('wp_auth_multi_rotate_oauth2_refresh_token', true)) {
+            $now = time();
+            $new_refresh_token = wp_auth_multi_generate_token(64);
+            $refresh_expires = $now + self::REFRESH_TTL;
+
+            // Update refresh token in database
+            $this->update_oauth2_refresh_token($token_data['id'], $new_refresh_token, $refresh_expires);
+
+            // Set new refresh token cookie
+            wp_auth_multi_set_cookie(
+                self::OAUTH2_REFRESH_COOKIE_NAME,
+                $new_refresh_token,
+                $refresh_expires,
+                '/wp-json/oauth2/v1/',
+                true,
+                true
+            );
+        }
+
+        return wp_auth_multi_success_response([
+            'access_token' => $access_token,
+            'token_type' => 'Bearer',
+            'expires_in' => self::TOKEN_TTL,
+            'scope' => implode(' ', $approved_scopes)
+        ], 'Token refreshed successfully', 200);
+    }
+
+    public function logout_endpoint(WP_REST_Request $request) {
+        wp_auth_multi_maybe_add_cors_headers();
+
+        $refresh_token = $_COOKIE[self::OAUTH2_REFRESH_COOKIE_NAME] ?? '';
+
+        if (!empty($refresh_token)) {
+            $this->revoke_oauth2_refresh_token($refresh_token);
+        }
+
+        // Delete refresh token cookie
+        wp_auth_multi_delete_cookie(self::OAUTH2_REFRESH_COOKIE_NAME, '/wp-json/oauth2/v1/');
+
+        return wp_auth_multi_success_response([], 'Logout successful', 200);
     }
 
     public function authenticate_bearer(string $token) {
@@ -905,7 +1020,7 @@ class Auth_OAuth2 {
         }
     }
 
-    private function oauth_error_redirect(string $redirect_uri = null, string $error = 'invalid_request', string $state = null) {
+    private function oauth_error_redirect(?string $redirect_uri = null, string $error = 'invalid_request', ?string $state = null) {
         if (!$redirect_uri) {
             return new WP_Error($error, 'OAuth2 error: ' . $error, ['status' => 400]);
         }
@@ -1091,5 +1206,105 @@ class Auth_OAuth2 {
         }
 
         return []; // No specific scopes required
+    }
+
+    /**
+     * Store OAuth2 refresh token in database
+     */
+    private function store_oauth2_refresh_token(int $user_id, string $refresh_token, int $expires_at, string $client_id, array $scopes): bool {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'jwt_refresh_tokens'; // Reuse JWT table with oauth2 context
+        $token_hash = wp_auth_multi_hash_token($refresh_token, WP_JWT_AUTH_SECRET);
+
+        $result = $wpdb->insert(
+            $table_name,
+            [
+                'user_id' => $user_id,
+                'token_hash' => $token_hash,
+                'expires_at' => $expires_at,
+                'created_at' => time(),
+                'is_revoked' => 0,
+                'client_id' => $client_id, // Store OAuth2 client info
+                'scopes' => json_encode($scopes), // Store granted scopes
+                'token_type' => 'oauth2' // Distinguish from JWT tokens
+            ],
+            [
+                '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s'
+            ]
+        );
+
+        return $result !== false;
+    }
+
+    /**
+     * Validate OAuth2 refresh token
+     */
+    private function validate_oauth2_refresh_token(string $refresh_token) {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'jwt_refresh_tokens';
+        $token_hash = wp_auth_multi_hash_token($refresh_token, WP_JWT_AUTH_SECRET);
+        $now = time();
+
+        $token_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table_name} WHERE token_hash = %s AND expires_at > %d AND is_revoked = 0 AND token_type = 'oauth2'",
+            $token_hash,
+            $now
+        ), ARRAY_A);
+
+        if (!$token_data) {
+            return new WP_Error(
+                'invalid_refresh_token',
+                'Invalid or expired refresh token',
+                ['status' => 401]
+            );
+        }
+
+        return $token_data;
+    }
+
+    /**
+     * Update OAuth2 refresh token (for token rotation)
+     */
+    private function update_oauth2_refresh_token(int $token_id, string $new_refresh_token, int $expires_at): bool {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'jwt_refresh_tokens';
+        $token_hash = wp_auth_multi_hash_token($new_refresh_token, WP_JWT_AUTH_SECRET);
+
+        $result = $wpdb->update(
+            $table_name,
+            [
+                'token_hash' => $token_hash,
+                'expires_at' => $expires_at,
+                'created_at' => time()
+            ],
+            ['id' => $token_id],
+            ['%s', '%d', '%d'],
+            ['%d']
+        );
+
+        return $result !== false;
+    }
+
+    /**
+     * Revoke OAuth2 refresh token
+     */
+    private function revoke_oauth2_refresh_token(string $refresh_token): bool {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'jwt_refresh_tokens';
+        $token_hash = wp_auth_multi_hash_token($refresh_token, WP_JWT_AUTH_SECRET);
+
+        $result = $wpdb->update(
+            $table_name,
+            ['is_revoked' => 1],
+            ['token_hash' => $token_hash, 'token_type' => 'oauth2'],
+            ['%d'],
+            ['%s', '%s']
+        );
+
+        return $result !== false;
     }
 }

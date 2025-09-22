@@ -159,10 +159,16 @@ class WP_REST_Auth_Multi {
             issued_at bigint(20) NOT NULL,
             user_agent varchar(500) DEFAULT NULL,
             ip_address varchar(45) DEFAULT NULL,
+            created_at bigint(20) DEFAULT NULL,
+            is_revoked tinyint(1) DEFAULT 0,
+            client_id varchar(255) DEFAULT NULL,
+            scopes text DEFAULT NULL,
+            token_type varchar(50) DEFAULT 'jwt',
             PRIMARY KEY (id),
             KEY user_id (user_id),
             KEY token_hash (token_hash),
-            KEY expires_at (expires_at)
+            KEY expires_at (expires_at),
+            KEY token_type (token_type)
         ) $charset_collate;";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');

@@ -267,10 +267,13 @@ class Auth_JWT {
                 'token_hash' => $token_hash,
                 'expires_at' => $expires_at,
                 'issued_at' => time(),
+                'created_at' => time(),
+                'is_revoked' => 0,
+                'token_type' => 'jwt',
                 'user_agent' => wp_auth_multi_get_user_agent(),
                 'ip_address' => wp_auth_multi_get_ip_address()
             ],
-            ['%d', '%s', '%d', '%d', '%s', '%s']
+            ['%d', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s']
         );
 
         return $result !== false;
@@ -288,7 +291,8 @@ class Auth_JWT {
                 "SELECT * FROM {$table_name}
                  WHERE token_hash = %s
                  AND expires_at > %d
-                 AND revoked_at IS NULL
+                 AND (revoked_at IS NULL OR is_revoked = 0)
+                 AND token_type = 'jwt'
                  LIMIT 1",
                 $token_hash,
                 $now
