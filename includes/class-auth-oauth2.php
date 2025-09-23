@@ -800,8 +800,16 @@ class Auth_OAuth2 {
         // Store refresh token in database
         $this->store_oauth2_refresh_token($code_data['user_id'], $refresh_token, $refresh_expires, $client_id, $approved_scopes);
 
+        error_log('OAuth2 Debug: About to set refresh token cookie - ' . json_encode([
+            'cookie_name' => self::OAUTH2_REFRESH_COOKIE_NAME,
+            'expires_at' => date('Y-m-d H:i:s', $refresh_expires),
+            'path' => '/wp-json/oauth2/v1/',
+            'user_id' => $code_data['user_id'],
+            'client_id' => $client_id
+        ]));
+
         // Set refresh token as HttpOnly cookie
-        wp_auth_multi_set_cookie(
+        $cookie_set = wp_auth_multi_set_cookie(
             self::OAUTH2_REFRESH_COOKIE_NAME,
             $refresh_token,
             $refresh_expires,
@@ -809,6 +817,11 @@ class Auth_OAuth2 {
             true,
             true
         );
+
+        error_log('OAuth2 Debug: OAuth2 token exchange successful, cookie set result: ' . ($cookie_set ? 'SUCCESS' : 'FAILED'));
+
+        // Debug: Check what cookies are available after setting
+        error_log('OAuth2 Debug: 🍪 Cookies after token exchange: ' . json_encode($_COOKIE));
 
         return wp_auth_multi_success_response([
             'access_token' => $access_token,

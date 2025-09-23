@@ -199,19 +199,51 @@ function wp_auth_multi_set_cookie(
     string $samesite = 'Strict'
 ): bool {
     if (headers_sent()) {
+        error_log('OAuth2 Debug: Cannot set cookie - headers already sent');
         return false;
     }
+
+    // Enhanced secure detection - check for HTTPS in various scenarios
+    $is_secure_connection = $secure && (
+        is_ssl() ||                                           // WordPress built-in SSL detection
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||  // Direct HTTPS check
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') || // Proxy forwarded
+        (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') || // Alternative proxy header
+        (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) || // HTTPS port
+        (!empty($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], 'https') !== false) // Cloudflare
+    );
 
     $options = [
         'expires' => $expires,
         'path' => $path,
         'domain' => '',
-        'secure' => $secure && is_ssl(),
+        'secure' => $is_secure_connection,
         'httponly' => $httponly,
         'samesite' => $samesite
     ];
 
-    return setcookie($name, $value, $options);
+    // Debug logging
+    error_log('OAuth2 Debug: Setting cookie - ' . json_encode([
+        'name' => $name,
+        'expires' => date('Y-m-d H:i:s', $expires),
+        'path' => $path,
+        'secure' => $is_secure_connection,
+        'httponly' => $httponly,
+        'samesite' => $samesite,
+        'is_ssl' => is_ssl(),
+        'server_https' => $_SERVER['HTTPS'] ?? 'not set',
+        'x_forwarded_proto' => $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? 'not set'
+    ]));
+
+    $result = setcookie($name, $value, $options);
+
+    if (!$result) {
+        error_log('OAuth2 Debug: setcookie() failed for cookie: ' . $name);
+    } else {
+        error_log('OAuth2 Debug: Cookie successfully set: ' . $name);
+    }
+
+    return $result;
 }
 
 /**
