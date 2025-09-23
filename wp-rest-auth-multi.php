@@ -22,6 +22,7 @@ class WP_REST_Auth_Multi {
     private $auth_jwt;
     private $auth_oauth2;
     private $admin_settings;
+    private $api_proxy;
 
     public function __construct() {
         add_action('plugins_loaded', [$this, 'init']);
@@ -40,6 +41,7 @@ class WP_REST_Auth_Multi {
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-admin-settings.php';
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-auth-jwt.php';
         require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-auth-oauth2.php';
+        require_once WP_REST_AUTH_MULTI_PLUGIN_DIR . 'includes/class-api-proxy.php';
 
         // Initialize admin settings
         if (is_admin()) {
@@ -48,6 +50,7 @@ class WP_REST_Auth_Multi {
 
         $this->auth_jwt = new Auth_JWT();
         $this->auth_oauth2 = new Auth_OAuth2();
+        $this->api_proxy = new WP_REST_API_Proxy();
     }
 
     private function setup_constants() {
